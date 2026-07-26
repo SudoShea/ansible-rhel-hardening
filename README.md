@@ -53,7 +53,7 @@ git clone https://github.com/SudoShea/ansible-system-hardening.git
 cd ansible-system-hardening
 ansible-galaxy collection install -r requirements.yml
 ```
-### 2. Configure your inventory and environment overides
+### 2. Configure your inventory and environment overrides
 Copy the template files to configure your local environment mappings:
 * **Inventory Setup**:
 ```bash
