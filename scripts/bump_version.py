@@ -86,7 +86,7 @@ def update_repository(new_version, target_files):
     print(f"\nSuccessfully updated repository version to v{new_version} across all tracked files.")
 
 def execute_git_workflow(version):
-    """Automates git add, commit, tag, and push with smart commit message generation and duplicate tag protection."""
+    """Automates git add, commit, tag, and push with smart commit message generation and remote tag protection."""
     print("\n--- Executing Git Workflow ---")
 
     tag_name = f"v{version}"
@@ -136,23 +136,39 @@ def execute_git_workflow(version):
         else:
             print(f"-> Committed with message: '{commit_msg}'")
 
-        # 4. Check if tag already exists locally to prevent exit code 128 crash
-        existing_tag = subprocess.run(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], capture_output=True, text=True)
-        if existing_tag.returncode == 0:
-            print(f"\nWarning: Tag '{tag_name}' already exists locally.")
-            overwrite = input("Do you want to overwrite the existing local tag? [y/N]: ").strip().lower()
+        # 4. Check if tag exists locally or remotely
+        local_check = subprocess.run(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], capture_output=True, text=True)
+        remote_check = subprocess.run(["git", "ls-remote", "--exit-code", "--tags", "origin", tag_name], capture_output=True, text=True)
+        
+        tag_local = (local_check.returncode == 0)
+        tag_remote = (remote_check.returncode == 0)
+
+        if tag_local or tag_remote:
+            print(f"\nWarning: Tag '{tag_name}' already exists (Local: {tag_local}, Remote: {tag_remote}).")
+            overwrite = input("Do you want to overwrite/re-push the tag? [y/N]: ").strip().lower()
             if overwrite == 'y':
-                subprocess.run(["git", "tag", "-d", tag_name], check=True)
-                print(f"-> Deleted old local tag {tag_name}")
+                if tag_local:
+                    subprocess.run(["git", "tag", "-d", tag_name], check=True)
+                    print(f"-> Deleted local tag {tag_name}")
+                if tag_remote:
+                    subprocess.run(["git", "push", "origin", "--delete", tag_name], check=True)
+                    print(f"-> Deleted remote tag {tag_name}")
+                
+                # Create fresh local tag
+                subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
+                print(f"-> Re-created annotated tag: {tag_name}")
             else:
-                print("-> Tag creation skipped.")
-                sys.exit(0)
+                print("-> Skipping tag sync. Pushing code only.")
+                subprocess.run(["git", "push", "origin", "main"], check=True)
+                print("-> Successfully pushed changes to remote (origin main).")
+                return
 
-        # 5. Create annotated git tag
-        subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
-        print(f"-> Created annotated tag: {tag_name}")
+        else:
+            # Create annotated git tag if it doesn't exist anywhere
+            subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
+            print(f"-> Created annotated tag: {tag_name}")
 
-        # 6. Push to remote origin main with tags
+        # 5. Push to remote origin main with tags
         subprocess.run(["git", "push", "origin", "main", "--tags"], check=True)
         print("-> Successfully pushed changes and tags to remote (origin main).")
 
@@ -185,7 +201,6 @@ if __name__ == "__main__":
     if confirm == 'y':
         update_repository(new_ver, target_files)
 
-        # Automatically prompt for git workflow after successful file updates
         git_confirm = input("\nDo you want to run the automated git workflow (add, commit, tag, push)? [y/N]: ").strip().lower()
         if git_confirm == 'y':
             execute_git_workflow(new_ver)
