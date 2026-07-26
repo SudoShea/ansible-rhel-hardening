@@ -1,0 +1,42 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/04_logging.yml
+# Description : CIS Section 4 - Audit logging and systemd-journald management
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: "CIS 4.1 | Ensure audit package is installed (Debian)"
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: "CIS 4.1 | Ensure audit package is installed (RedHat)"
+  ansible.builtin.package:
+    name: audit
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: "CIS 4.1 | Ensure auditd service is enabled and running"
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: "CIS 4.2 | Configure systemd-journald settings"
+  community.general.ini_file:
+    path: /etc/systemd/journald.conf
+    section: Journal
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - { option: 'Storage', value: 'persistent' }
+    - { option: 'Compress', value: 'yes' }
+    - { option: 'ForwardToSyslog', value: "{{ cis_journald_forward_to_syslog }}" }
+  notify: restart journald

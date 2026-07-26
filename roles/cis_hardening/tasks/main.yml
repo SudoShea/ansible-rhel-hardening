@@ -1,0 +1,28 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/main.yml
+# Description : Entrypoint orchestrating CIS Benchmark task files
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: Apply filesystem security controls
+  ansible.builtin.include_tasks: 01_filesystem.yml
+  when: cis_filesystem_enabled | default(true)
+
+- name: Apply service minimisation controls
+  ansible.builtin.include_tasks: 02_services.yml
+  when: cis_services_enabled | default(true)
+
+- name: Apply network stack sysctl and firewall hardening
+  ansible.builtin.include_tasks: 03_network.yml
+  when: cis_network_enabled | default(true)
+
+- name: Apply audit logging rules
+  ansible.builtin.include_tasks: 04_logging.yml
+  when: cis_logging_enabled | default(true)
+
+- name: Apply SSH and PAM authentication controls
+  ansible.builtin.include_tasks: 05_auth.yml
+  when: cis_auth_enabled | default(true)

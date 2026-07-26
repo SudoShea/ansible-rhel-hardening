@@ -1,0 +1,77 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/01_filesystem.yml
+# Description : CIS Section 1 - Filesystem integrity, permissions, and core dumps
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: "CIS 1.1 | Disable process core dumps via pam_limits"
+  community.general.pam_limits:
+    domain: '*'
+    limit_type: 'hard'
+    limit_item: 'core'
+    value: '0'
+  when: cis_disable_core_dumps | default(true)
+
+- name: "CIS 1.1 | Restrict suid core dumps via sysctl"
+  ansible.posix.sysctl:
+    name: fs.suid_dumpable
+    value: '0'
+    state: present
+    reload: true
+  when: cis_disable_core_dumps | default(true)
+
+- name: "CIS 6.1 | Verify permissions on /etc/passwd"
+  ansible.builtin.file:
+    path: /etc/passwd
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "CIS 6.1 | Verify permissions on /etc/shadow (Debian)"
+  ansible.builtin.file:
+    path: /etc/shadow
+    owner: root
+    group: shadow
+    mode: '0640'
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: "CIS 6.1 | Verify permissions on /etc/shadow (RedHat)"
+  ansible.builtin.file:
+    path: /etc/shadow
+    owner: root
+    group: root
+    mode: '0600'
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: "CIS 6.1 | Verify permissions on /etc/group"
+  ansible.builtin.file:
+    path: /etc/group
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "CIS 6.1 | Verify permissions on /etc/gshadow (Debian)"
+  ansible.builtin.file:
+    path: /etc/gshadow
+    owner: root
+    group: shadow
+    mode: '0640'
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: "CIS 6.1 | Verify permissions on /etc/gshadow (RedHat)"
+  ansible.builtin.file:
+    path: /etc/gshadow
+    owner: root
+    group: root
+    mode: '0600'
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: "CIS 5.4 | Configure default UMASK in /etc/login.defs"
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^UMASK'
+    line: 'UMASK           027'
+    state: present

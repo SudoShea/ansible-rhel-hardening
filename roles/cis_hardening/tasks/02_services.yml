@@ -1,0 +1,30 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/02_services.yml
+# Description : CIS Section 2 - Service minimisation & time synchronization
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: "CIS 2.2 | Stop and disable unnecessary legacy network services"
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ cis_disabled_services }}"
+  failed_when: false
+
+- name: "CIS 2.1 | Ensure time synchronization is enabled (Debian)"
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: started
+    enabled: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: "CIS 2.1 | Ensure time synchronization is enabled (RedHat)"
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+  when: ansible_facts['os_family'] == 'RedHat'

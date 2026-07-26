@@ -1,0 +1,23 @@
+# ==============================================================================
+# File        : roles/cis_hardening/handlers/main.yml
+# Description : Service notification handlers for cis_hardening role
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: reload audit rules
+  ansible.builtin.command:
+    cmd: augenrules --load
+  failed_when: false
+
+- name: restart journald
+  ansible.builtin.service:
+    name: systemd-journald
+    state: restarted
+
+- name: restart sshd
+  ansible.builtin.service:
+    name: "{{ (ansible_facts['os_family'] == 'Debian') | ternary('ssh', 'sshd') }}"
+    state: restarted

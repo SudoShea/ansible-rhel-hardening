@@ -1,0 +1,53 @@
+# ==============================================================================
+# File        : roles/cis_hardening/defaults/main.yml
+# Description : Generic CIS Level 1 baseline defaults (overridable via group_vars)
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+# Section Toggles
+cis_filesystem_enabled: true
+cis_services_enabled: true
+cis_network_enabled: true
+cis_logging_enabled: true
+cis_auth_enabled: true
+
+# Hardening Parameters
+cis_disable_core_dumps: true
+
+# Generic Network Defaults (Overridden by group_vars/all.yml)
+cis_trusted_subnets:
+  - "192.168.1.0/24"
+
+cis_net_ip_forward: 1
+cis_net_rp_filter: 2
+cis_net_unprivileged_port_start: 53
+
+# Open Ports
+cis_allowed_tcp_ports: [22, 53, 80, 443, 8080]
+cis_allowed_udp_ports: [53, 5353]
+
+# Dangerous Legacy Services to Disable
+cis_disabled_services:
+  - cups
+  - isc-dhcp-server
+  - nis
+  - rsh
+  - talk
+  - telnet
+
+# Standard CIS SSH Tuning (Overridden by group_vars/all.yml)
+cis_sshd_max_auth_tries: 4
+cis_sshd_permit_root_login: "no"
+cis_sshd_client_alive_interval: 300
+cis_sshd_client_alive_count_max: 3
+
+# Standard CIS Account Security (Overridden by group_vars/all.yml)
+cis_password_max_days: 365
+cis_password_min_days: 7
+cis_password_warn_age: 14
+
+cis_audit_immutable: true
+cis_journald_forward_to_syslog: "yes"

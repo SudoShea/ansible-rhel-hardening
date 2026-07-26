@@ -1,0 +1,49 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/05_auth.yml
+# Description : CIS Section 5 - SSH and PAM authentication controls
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+- name: "CIS 5.2 | Ensure SSH host keys exist for configuration validation"
+  ansible.builtin.command:
+    cmd: ssh-keygen -A
+    creates: /etc/ssh/ssh_host_ed25519_key
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: "CIS 5.2 | Verify permissions on /etc/ssh/sshd_config"
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: "CIS 5.2 | Enforce hardened OpenSSH daemon parameters"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    validate: 'sshd -t -f %s'
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: "PermitRootLogin {{ cis_sshd_permit_root_login }}" }
+    - { regexp: '^#?PermitEmptyPasswords', line: 'PermitEmptyPasswords no' }
+    - { regexp: '^#?MaxAuthTries', line: "MaxAuthTries {{ cis_sshd_max_auth_tries }}" }
+    - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+    - { regexp: '^#?ClientAliveInterval', line: "ClientAliveInterval {{ cis_sshd_client_alive_interval }}" }
+    - { regexp: '^#?ClientAliveCountMax', line: "ClientAliveCountMax {{ cis_sshd_client_alive_count_max }}" }
+    - { regexp: '^#?LoginGraceTime', line: 'LoginGraceTime 60' }
+  notify: restart sshd
+
+- name: "CIS 5.4 | Configure user password expiration parameters in /etc/login.defs"
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^PASS_MAX_DAYS', line: "PASS_MAX_DAYS   {{ cis_password_max_days }}" }
+    - { regexp: '^PASS_MIN_DAYS', line: "PASS_MIN_DAYS   {{ cis_password_min_days }}" }
+    - { regexp: '^PASS_WARN_AGE', line: "PASS_WARN_AGE   {{ cis_password_warn_age }}" }

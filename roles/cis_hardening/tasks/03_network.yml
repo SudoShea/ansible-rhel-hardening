@@ -1,0 +1,82 @@
+# ==============================================================================
+# File        : roles/cis_hardening/tasks/03_network.yml
+# Description : CIS Section 3 - Homelab-aware kernel settings & LAN trust firewall
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+# 3.1 & 3.2 | Network Kernel Parameters
+- name: "CIS 3.1 & 3.2 | Apply IPv4 network kernel security settings"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value | string }}"
+    state: present
+    reload: true
+  loop:
+    - { key: 'net.ipv4.ip_forward', value: "{{ cis_net_ip_forward }}" }
+    - { key: 'net.ipv4.conf.all.rp_filter', value: "{{ cis_net_rp_filter }}" }
+    - { key: 'net.ipv4.conf.default.rp_filter', value: "{{ cis_net_rp_filter }}" }
+    - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { key: 'net.ipv4.conf.default.accept_redirects', value: '0' }
+    - { key: 'net.ipv4.conf.all.send_redirects', value: '0' }
+    - { key: 'net.ipv4.conf.default.send_redirects', value: '0' }
+    - { key: 'net.ipv4.tcp_syncookies', value: '1' }
+    - { key: 'net.ipv4.icmp_echo_ignore_broadcasts', value: '1' }
+    - { key: 'net.ipv4.icmp_ignore_bogus_error_responses', value: '1' }
+    - { key: 'net.ipv4.conf.all.log_martians', value: '1' }
+    - { key: 'net.ipv4.conf.default.log_martians', value: '1' }
+    - { key: 'net.ipv4.ip_unprivileged_port_start', value: "{{ cis_net_unprivileged_port_start }}" }
+  tags: ['sysctl', 'network']
+
+# 3.5 | Firewall Management (Debian - UFW)
+- name: "CIS 3.5 | Install UFW on Debian family"
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: ['firewall']
+
+- name: "CIS 3.5 | Allow trusted subnets in UFW (Debian)"
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item }}"
+  loop: "{{ cis_trusted_subnets }}"
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: ['firewall']
+
+- name: "CIS 3.5 | Enable UFW with default deny incoming policy"
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+  when: ansible_facts['os_family'] == 'Debian'
+  tags: ['firewall']
+
+# 3.5 | Firewall Management (RedHat / Fedora - Firewalld)
+- name: "CIS 3.5 | Install Firewalld on RedHat family"
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: ['firewall']
+
+- name: "CIS 3.5 | Ensure Firewalld service is running and enabled"
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: ['firewall']
+
+- name: "CIS 3.5 | Allow trusted subnets in Firewalld"
+  ansible.posix.firewalld:
+    zone: trusted
+    source: "{{ item }}"
+    state: enabled
+    permanent: true
+    immediate: true
+  loop: "{{ cis_trusted_subnets }}"
+  when: ansible_facts['os_family'] == 'RedHat'
+  tags: ['firewall']

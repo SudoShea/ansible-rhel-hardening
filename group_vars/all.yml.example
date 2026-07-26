@@ -1,0 +1,16 @@
+# ==============================================================================
+# File        : group_vars/all.yml.example
+# Description : Template for site-specific overrides (Copy to all.yml to use)
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
+# ==============================================================================
+
+---
+# Override default trusted subnets for your specific homelab environment
+cis_trusted_subnets:
+  - "192.168.1.0/24"
+  - "10.0.0.0/16"
+
+# Optional local overrides for SSH or firewall ports if needed
+# cis_sshd_permit_root_login: "no"

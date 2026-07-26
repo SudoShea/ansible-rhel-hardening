@@ -1,29 +1,27 @@
 # ==============================================================================
-# Ansible Temporary & Local Files
+# File        : .gitignore
+# Description : Git ignore patterns for ansible-system-hardening
+# Author      : SudoShea
+# Version     : 1.1.0
+# License     : MIT
 # ==============================================================================
+
+# Local inventory & secrets overrides
+inventory.local.ini
+*.local.yml
+.vault_pass
+.vault-pass
+group_vars/all.yml
+
+# Ansible execution artifacts
 *.retry
 *.log
 .ansible/
-*.gztar
+.ansible-lint
 
-# Local Vault & Secrets Files (Safety catch)
-*vault_pass*
-*.vault
-.env
-
-# ==============================================================================
-# Editor & OS Metadata
-# ==============================================================================
-# VS Code / IDEs
+# IDE & OS clutter
 .vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-
-# Vim / Swap files
-*.swp
-*.swo
-*~
-
-# OS Files
+.idea/
 .DS_Store
-Thumbs.db
+__pycache__/
+*.pyc
