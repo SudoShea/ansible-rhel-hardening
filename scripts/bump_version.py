@@ -51,7 +51,7 @@ def find_version_files():
 
     for root, dirs, files in os.walk("."):
         dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
-        
+
         for file in files:
             filepath = os.path.join(root, file)
             try:
@@ -60,7 +60,7 @@ def find_version_files():
                         matching_files.append(filepath)
             except (UnicodeDecodeError, PermissionError):
                 continue
-                
+
     return sorted(matching_files)
 
 def update_repository(new_version, target_files):
@@ -72,13 +72,13 @@ def update_repository(new_version, target_files):
 
     # 2. Update headers using lambda to prevent regex group reference errors
     pattern = re.compile(r"(#\s*Version\s*[:\s]*)[0-9]+\.[0-9]+\.[0-9]+")
-    
+
     for filepath in target_files:
         with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
-            
+
         new_content = pattern.sub(lambda m: m.group(1) + new_version, content)
-        
+
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(new_content)
         print(f"Synchronised header   : {filepath}")
@@ -86,17 +86,20 @@ def update_repository(new_version, target_files):
     print(f"\nSuccessfully updated repository version to v{new_version} across all tracked files.")
 
 def execute_git_workflow(version):
-    """Automates git add, commit, tag, and push with smart commit message generation."""
+    """Automates git add, commit, tag, and push with smart commit message generation and duplicate tag protection."""
     print("\n--- Executing Git Workflow ---")
-    
+
+    tag_name = f"v{version}"
+    tag_msg = f"Release {tag_name}"
+
     try:
         # 1. Stage all changes first so we can inspect them
         subprocess.run(["git", "add", "-A"], check=True)
-        
+
         # 2. Inspect staged files to auto-generate a smart compound conventional commit message
         status_res = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True)
         staged_files = status_res.stdout
-        
+
         components = []
         if "scripts/" in staged_files:
             components.append("fix(scripts)")
@@ -108,14 +111,14 @@ def execute_git_workflow(version):
             components.append("refactor(hardening)")
         if "inventory" in staged_files or "group_vars" in staged_files:
             components.append("chore(config)")
-            
+
         # Build the smart default suggestion
         if components:
             prefix = "/".join(components)
             default_msg = f"{prefix}: bump version to v{version}"
         else:
             default_msg = f"chore(release): bump version to v{version}"
-            
+
     except Exception:
         default_msg = f"chore(release): bump version to v{version}"
 
@@ -124,23 +127,35 @@ def execute_git_workflow(version):
     commit_msg = input(f"[{default_msg}]: ").strip()
     if not commit_msg:
         commit_msg = default_msg
-        
-    tag_name = f"v{version}"
-    tag_msg = f"Release {tag_name}"
-    
+
     try:
-        # 3. Commit changes
-        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-        print(f"-> Committed with message: '{commit_msg}'")
-        
-        # 4. Create annotated git tag
+        # 3. Commit changes (Handle gracefully if no new changes exist)
+        commit_res = subprocess.run(["git", "commit", "-m", commit_msg])
+        if commit_res.returncode != 0:
+            print("-> No new changes to commit. Proceeding to tag/push...")
+        else:
+            print(f"-> Committed with message: '{commit_msg}'")
+
+        # 4. Check if tag already exists locally to prevent exit code 128 crash
+        existing_tag = subprocess.run(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], capture_output=True, text=True)
+        if existing_tag.returncode == 0:
+            print(f"\nWarning: Tag '{tag_name}' already exists locally.")
+            overwrite = input("Do you want to overwrite the existing local tag? [y/N]: ").strip().lower()
+            if overwrite == 'y':
+                subprocess.run(["git", "tag", "-d", tag_name], check=True)
+                print(f"-> Deleted old local tag {tag_name}")
+            else:
+                print("-> Tag creation skipped.")
+                sys.exit(0)
+
+        # 5. Create annotated git tag
         subprocess.run(["git", "tag", "-a", tag_name, "-m", tag_msg], check=True)
         print(f"-> Created annotated tag: {tag_name}")
-        
-        # 5. Push to remote origin main with tags
+
+        # 6. Push to remote origin main with tags
         subprocess.run(["git", "push", "origin", "main", "--tags"], check=True)
         print("-> Successfully pushed changes and tags to remote (origin main).")
-        
+
     except subprocess.CalledProcessError as e:
         print(f"Error during git workflow execution: {e}")
         sys.exit(1)
@@ -149,27 +164,27 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/bump_version.py [patch|minor|major|X.Y.Z]")
         sys.exit(1)
-        
+
     bump_arg = sys.argv[1]
     current_ver = get_current_version()
     new_ver = bump_version(current_ver, bump_arg)
-    
+
     target_files = find_version_files()
-    
+
     print(f"Current version : {current_ver}")
     print(f"Target version  : {new_ver}\n")
-    
+
     print("Discovered files with version headers:")
     if target_files:
         for tf in target_files:
             print(f"  - {tf}")
     else:
         print("  (None found)")
-        
+
     confirm = input("\nProceed with version update and file synchronisation? [y/N]: ").strip().lower()
     if confirm == 'y':
         update_repository(new_ver, target_files)
-        
+
         # Automatically prompt for git workflow after successful file updates
         git_confirm = input("\nDo you want to run the automated git workflow (add, commit, tag, push)? [y/N]: ").strip().lower()
         if git_confirm == 'y':
