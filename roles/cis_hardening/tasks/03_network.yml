@@ -2,7 +2,7 @@
 # File        : roles/cis_hardening/tasks/03_network.yml
 # Description : CIS Section 3 - Homelab-aware kernel settings & LAN trust firewall
 # Author      : SudoShea
-# Version     : 1.1.0
+# Version     : 1.1.1
 # License     : MIT
 # ==============================================================================
 

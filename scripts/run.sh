@@ -3,7 +3,7 @@
 # File        : scripts/run.sh
 # Description : Generic execution wrapper for ansible-system-hardening
 # Author      : SudoShea
-# Version     : 1.1.0
+# Version     : 1.1.1
 # License     : MIT
 # ==============================================================================
 

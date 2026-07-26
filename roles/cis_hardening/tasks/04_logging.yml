@@ -2,7 +2,7 @@
 # File        : roles/cis_hardening/tasks/04_logging.yml
 # Description : CIS Section 4 - Audit logging and systemd-journald management
 # Author      : SudoShea
-# Version     : 1.1.0
+# Version     : 1.1.1
 # License     : MIT
 # ==============================================================================
 

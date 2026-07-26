@@ -2,7 +2,7 @@
 # File        : site.yml
 # Description : Primary playbook applying baseline system hardening & CIS compliance
 # Author      : SudoShea
-# Version     : 1.1.0
+# Version     : 1.1.1
 # License     : MIT
 # ==============================================================================
 

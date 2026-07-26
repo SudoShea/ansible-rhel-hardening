@@ -2,7 +2,7 @@
 # File        : roles/cis_hardening/tasks/01_filesystem.yml
 # Description : CIS Section 1 - Filesystem integrity, permissions, and core dumps
 # Author      : SudoShea
-# Version     : 1.1.0
+# Version     : 1.1.1
 # License     : MIT
 # ==============================================================================
 
